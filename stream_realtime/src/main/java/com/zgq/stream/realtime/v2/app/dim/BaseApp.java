@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Connection;
 
 public class BaseApp {
     public static void main(String[] args) throws Exception {
+
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         env.setParallelism(4);

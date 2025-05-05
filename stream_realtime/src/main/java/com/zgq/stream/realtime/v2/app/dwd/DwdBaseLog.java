@@ -218,6 +218,7 @@ public class DwdBaseLog {
                 .sinkTo(FlinkSinkUtil.getKafkaSink(Constant.TOPIC_DWD_TRAFFIC_ACTION));
 
         env.execute("dwd_log");
+
     }
 
 }
