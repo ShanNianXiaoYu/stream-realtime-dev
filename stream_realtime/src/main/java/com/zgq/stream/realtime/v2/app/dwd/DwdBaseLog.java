@@ -192,9 +192,10 @@ public class DwdBaseLog {
         errDS.print("错误:");
         startDS.print("启动:");
         displayDS.print("曝光:");
+
         actionDS.print("动作:");
 
-        Map <String, DataStream <String> > streamMap = new HashMap <>();
+        +++++++++++++++++++++++++++++++++++++++++
         streamMap.put(ERR,errDS);
         streamMap.put(START,startDS);
         streamMap.put(DISPLAY,displayDS);
