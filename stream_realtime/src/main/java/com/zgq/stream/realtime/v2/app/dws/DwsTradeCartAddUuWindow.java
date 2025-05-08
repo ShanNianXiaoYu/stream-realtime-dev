@@ -51,12 +51,16 @@ public class DwsTradeCartAddUuWindow {
 
         env.setParallelism(1);
 
+        // 设置检查点间隔 5000 ms ,精确一次
         env.enableCheckpointing(5000L, CheckpointingMode.EXACTLY_ONCE);
 
+        // 设置重启策略为固定延迟重启
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(3,3000L));
 
+//        设置消费者组件消费kafka主题
         KafkaSource <String> kafkaSource = FlinkSourceUtil.getKafkaSource("dwd_trade_cart_add", "dws_trade_cart_add_uu_window");
 
+//        从 Kafka 数据源创建数据流，noWatermarks()：不使用水位线策略
         DataStreamSource <String> kafkaStrDS
                 = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka_Source");
 
@@ -152,7 +156,7 @@ public class DwsTradeCartAddUuWindow {
                 .map(new BeanToJsonStrMapFunction <>());
 
         operator.print();
-
+//        写入doris数据库
         operator.sinkTo(FlinkSinkUtil.getDorisSink("dws_trade_cart_add_uu_window"));
 
         env.execute("DwsTradeCartAddUuWindow");

@@ -26,6 +26,7 @@
         <flink-cdc.vesion>2.4.2</flink-cdc.vesion>
         <fastjson.version>1.2.83</fastjson.version>
         <hbase.version>2.4.11</hbase.version>
+        <okhttp.version>3.8.1</okhttp.version>
     </properties>
 
     <dependencies>

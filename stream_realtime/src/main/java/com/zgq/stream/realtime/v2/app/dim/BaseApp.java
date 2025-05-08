@@ -35,15 +35,15 @@ import org.apache.hadoop.hbase.client.Connection;
 
 public class BaseApp {
     public static void main(String[] args) throws Exception {
-
+//        创建执行环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
+//        设置并行度为 4
         env.setParallelism(4);
-
+//        设置检查点 5秒检查一次
         env.enableCheckpointing(5000L , CheckpointingMode.EXACTLY_ONCE);
-
+//        消费 kafka 数据,定义消费者组id dim_app
         KafkaSource <String> kafkaSource = FlinkSourceUtil.getKafkaSource(Constant.TOPIC_DB, "dim_app");
-
+//        获取 kafka 主题,不设置检查点
         DataStreamSource <String> kafkaStrDS = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "kafka_source");
 
 //        kafkaStrDS.print();
