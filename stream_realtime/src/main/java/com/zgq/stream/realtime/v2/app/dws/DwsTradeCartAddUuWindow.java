@@ -60,12 +60,12 @@ public class DwsTradeCartAddUuWindow {
 //        设置消费者组件消费kafka主题
         KafkaSource <String> kafkaSource = FlinkSourceUtil.getKafkaSource("dwd_trade_cart_add", "dws_trade_cart_add_uu_window");
 
-//        从 Kafka 数据源创建数据流，noWatermarks()：不使用水位线策略
+//        从 Kafka 数据源创建数据流，不使用水位线策略
         DataStreamSource <String> kafkaStrDS
                 = env.fromSource(kafkaSource, WatermarkStrategy.noWatermarks(), "Kafka_Source");
-
+//        将字符串类型的数据映射为JSONObject类型的数据
         SingleOutputStreamOperator < JSONObject > jsonObjDS = kafkaStrDS.map(JSON::parseObject);
-
+//        为数据流分配时间戳和水位线，使用单调递增时间戳策略
         SingleOutputStreamOperator<JSONObject> withWatermarkDS = jsonObjDS.assignTimestampsAndWatermarks(
                 WatermarkStrategy
                         .<JSONObject>forMonotonousTimestamps()
@@ -78,18 +78,22 @@ public class DwsTradeCartAddUuWindow {
                                 }
                         )
         );
-
+//        根据user_id对数据进行分组
         KeyedStream <JSONObject, String> keyedDS = withWatermarkDS.keyBy(jsonObj -> jsonObj.getString("user_id"));
 
+//        对分组后的数据进行处理
         SingleOutputStreamOperator<JSONObject> cartUUDS = keyedDS.process(
                 new KeyedProcessFunction <String, JSONObject, JSONObject>() {
+//                    存储上次加购状态
                     private ValueState <String> lastCartDateState;
 
                     @Override
                     public void open(Configuration parameters) {
                         ValueStateDescriptor <String> valueStateDescriptor
                                 = new ValueStateDescriptor<>("lastCartDateState", String.class);
+//                        设置状态的生命周期 1天
                         valueStateDescriptor.enableTimeToLive(StateTtlConfig.newBuilder(Time.days(1)).build());
+//                        获取状态
                         lastCartDateState = getRuntimeContext().getState(valueStateDescriptor);
                     }
 
@@ -108,9 +112,11 @@ public class DwsTradeCartAddUuWindow {
                 }
         );
 
+//        对处理后的数据进行窗口操作，使用滚动事件时间窗口，窗口大小为2秒
         AllWindowedStream <JSONObject, TimeWindow > windowDS = cartUUDS
                 .windowAll(TumblingEventTimeWindows.of(org.apache.flink.streaming.api.windowing.time.Time.seconds(2)));
 
+//        对窗口内的数据进行聚合操作
         SingleOutputStreamOperator<CartAddUuBean> aggregateDS = windowDS.aggregate(
                 new AggregateFunction <JSONObject, Long, Long>() {
                     @Override
@@ -136,12 +142,19 @@ public class DwsTradeCartAddUuWindow {
                 new AllWindowFunction <Long, CartAddUuBean, TimeWindow>() {
                     @Override
                     public void apply(TimeWindow window, Iterable<Long> values, Collector<CartAddUuBean> out) {
+//                        获取窗口内聚合后的数量
                         Long cartUUCt = values.iterator().next();
+//                        获取窗口的开始时间戳并转换为秒
                         long startTs = window.getStart() / 1000;
+//                        获取窗口的结束时间戳并转换为秒
                         long endTs = window.getEnd() / 1000;
+//                        将开始时间戳转换为日期时间字符串
                         String stt = DateFormatUtil.tsToDateTime(startTs);
+//                        将结束时间戳转换为日期时间字符串
                         String edt = DateFormatUtil.tsToDateTime(endTs);
+//                        将开始时间戳转换为日期字符串
                         String curDate = DateFormatUtil.tsToDate(startTs);
+//                        输出聚合后的结果
                         out.collect(new CartAddUuBean(
                                 stt,
                                 edt,
@@ -152,11 +165,12 @@ public class DwsTradeCartAddUuWindow {
                 }
         );
 
+//        将聚合后的结果映射为字符串类型
         SingleOutputStreamOperator<String> operator = aggregateDS
                 .map(new BeanToJsonStrMapFunction <>());
 
         operator.print();
-//        写入doris数据库
+//        处理后的数据写入doris数据库
         operator.sinkTo(FlinkSinkUtil.getDorisSink("dws_trade_cart_add_uu_window"));
 
         env.execute("DwsTradeCartAddUuWindow");

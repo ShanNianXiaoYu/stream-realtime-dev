@@ -25,7 +25,7 @@ public class DwdTradeOrderCancelDetail {
   StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
 
   env.enableCheckpointing(5000L, CheckpointingMode.EXACTLY_ONCE);
-
+//  设置空闲状态的保留时间为 30 分钟 5 秒
   tableEnv.getConfig().setIdleStateRetention(Duration.ofSeconds(30 * 60 + 5));
 
   tableEnv.executeSql("CREATE TABLE topic_db (\n" +
@@ -45,6 +45,7 @@ public class DwdTradeOrderCancelDetail {
   );
         tableEnv.executeSql("select * from base_dic").print();
 
+//  从 topic_db 表中查询订单取消相关信息
   Table orderCancel = tableEnv.sqlQuery("select " +
           " `after`['id'] as id, " +
           " `after`['operate_time'] as operate_time, " +
@@ -58,7 +59,7 @@ public class DwdTradeOrderCancelDetail {
         orderCancel.execute().print();
 
 
-  //TODO 从下单事实表中获取下单数据
+  // 从下单事实表中获取下单数据
   tableEnv.executeSql(
           "create table dwd_trade_order_detail(" +
                   "  id string," +
@@ -80,7 +81,7 @@ public class DwdTradeOrderCancelDetail {
                   "  ts_ms bigint " +
                   "  )" + SQLUtil.getKafkaDDL(Constant.TOPIC_DWD_TRADE_ORDER_DETAIL,Constant.TOPIC_DWD_TRADE_ORDER_CANCEL));
 
-  //TODO 将下单事实表和取消订单表进行关联
+  // 将下单事实表和取消订单表进行关联
   Table result = tableEnv.sqlQuery(
           "select  " +
                   "  od.id," +
@@ -105,7 +106,7 @@ public class DwdTradeOrderCancelDetail {
                   "  on od.order_id = oc.id ");
         result.execute().print();
 
-  //TODO 将关联的结果写到kafka主题中
+  // 将关联的结果写到kafka主题中
   tableEnv.executeSql(
           "create table "+Constant.TOPIC_DWD_TRADE_ORDER_CANCEL+"(" +
                   "  id string," +
@@ -127,6 +128,7 @@ public class DwdTradeOrderCancelDetail {
                   "  ts_ms bigint ," +
                   "  PRIMARY KEY (id) NOT ENFORCED " +
                   "  )" + SQLUtil.getUpsertKafkaDDL(Constant.TOPIC_DWD_TRADE_ORDER_CANCEL));
+//  写入 kafka 主题
   result.executeInsert(Constant.TOPIC_DWD_TRADE_ORDER_CANCEL);
 
   env.execute("DwdTradeOrderCancelDetail");
