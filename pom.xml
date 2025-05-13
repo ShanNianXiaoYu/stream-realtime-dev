@@ -13,6 +13,7 @@
     <modules>
         <module>stream_common</module>
         <module>stream_realtime</module>
+        <module>stream_realtime2</module>
     </modules>
 
 
@@ -126,6 +127,16 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>${okhttp.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.zgq</groupId>
+            <artifactId>stream_common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
     <dependencyManagement>
