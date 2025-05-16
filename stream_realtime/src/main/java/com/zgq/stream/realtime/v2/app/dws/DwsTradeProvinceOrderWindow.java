@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @Package com.zgq.stream.realtime.com.zgq.stream.realtime.com.zgq.stream.realtime.v2.app.dws.DwsTradeProvinceOrderWindow
- * @Author zheyuan.liu
+ * @Author guoqiang.zhang
  * @Date 2025/4/21 14:56
  * @description: DwsTradeProvinceOrderWindow
  */

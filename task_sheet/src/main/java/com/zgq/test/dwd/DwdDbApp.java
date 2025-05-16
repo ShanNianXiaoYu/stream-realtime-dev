@@ -2,7 +2,7 @@ package com.zgq.test.dwd;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.lzy.stream.realtime.v1.utils.FlinkSourceUtil;
+import com.zgq.stream.realtime.v1.utils.FlinkSourceUtil;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.kafka.source.KafkaSource;
@@ -22,23 +22,25 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * @Package com.lzy.app.dwd.DwdApp
- * @Author zheyuan.liu
+ * @Package com.zgq.app.dwd.DwdApp
+ * @Author guoqiang.zhang
  * @Date 2025/5/12 21:46
  * @description:
  */
 
 public class DwdDbApp {
     public static void main(String[] args) throws Exception {
+//         创建 Flink 流处理执行环境并设置并行度
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         env.setParallelism(1);
 
+//        从 Kafka 主题 "topic_db" 消费数据，使用 "dwd_app" 作为消费者组 ID
         KafkaSource<String> kafkaSourceBd = FlinkSourceUtil.getKafkaSource("topic_db", "dwd_app");
-
         DataStreamSource<String> kafka_source = env.fromSource(kafkaSourceBd, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
-
+//     将 JSON 字符串解析为 JSONObject，并设置事件时间和水印
+//     允许 5 秒的乱序数据，使用消息中的 ts_ms 字段作为事件时间戳
         SingleOutputStreamOperator<JSONObject> operator = kafka_source.map(JSON::parseObject)
                 .assignTimestampsAndWatermarks(WatermarkStrategy.<JSONObject>forBoundedOutOfOrderness(Duration.ofSeconds(5))
                         .withTimestampAssigner(new SerializableTimestampAssigner<JSONObject>() {
@@ -50,17 +52,19 @@ public class DwdDbApp {
 
 //        kafka_source.print();
 
+//         过滤出用户基本信息表的数据
         SingleOutputStreamOperator<JSONObject> UserInfoDS = operator
                 .filter(json -> json.getJSONObject("source").getString("table").equals("user_info"));
-
+//         过滤出用户补充信息表的数据
         SingleOutputStreamOperator<JSONObject> UserInfoSupDS = operator
                 .filter(json -> json.getJSONObject("source").getString("table").equals("user_info_sup_msg"));
-
+// 处理用户补充信息流，提取并转换需要的字段
         SingleOutputStreamOperator<JSONObject> streamOperator = UserInfoSupDS.process(new ProcessFunction<JSONObject, JSONObject>() {
             @Override
             public void processElement(JSONObject value, ProcessFunction<JSONObject, JSONObject>.Context ctx, Collector<JSONObject> out) throws Exception {
                 JSONObject result = new JSONObject();
                 if (value.containsKey("after") && value.getJSONObject("after") != null) {
+//                 提取用户补充信息字段
                     JSONObject after = value.getJSONObject("after");
                     result.put("uid", after.getIntValue("uid"));
                     result.put("unit_height", after.getString("unit_height"));
@@ -75,11 +79,13 @@ public class DwdDbApp {
 
 //        streamOperator.print();
 
+//         处理用户基本信息流，提取需要的字段并进行数据转换
         SingleOutputStreamOperator<JSONObject> outputStreamOperator = UserInfoDS.process(new ProcessFunction<JSONObject, JSONObject>() {
             @Override
             public void processElement(JSONObject value, ProcessFunction<JSONObject, JSONObject>.Context ctx, Collector<JSONObject> out) throws Exception {
                 JSONObject object = new JSONObject();
                 JSONObject after = value.getJSONObject("after");
+//                 提取用户基本信息字段
                 object.put("uid", after.getIntValue("id"));
                 object.put("name", after.getString("name"));
                 object.put("nick_name", after.getString("nick_name"));
@@ -88,21 +94,24 @@ public class DwdDbApp {
                 object.put("email", after.getString("email"));
                 object.put("gender", after.getString("gender"));
                 object.put("ts_ms", value.getLong("ts_ms"));
+
+//                处理生日字段，计算派生信息
                 if (after != null && after.containsKey("birthday")) {
                     Integer epochDay = after.getInteger("birthday");
                     if (epochDay != null) {
+//                      将纪元日转换为标准日期格式
                         LocalDate birthday = LocalDate.ofEpochDay(epochDay);
                         object.put("birthday", birthday.format(DateTimeFormatter.ISO_DATE));
-
+//                        计算出生年代（例如：1990年代）
                         int year = birthday.getYear();
                         int decadeStart = (year / 10) * 10;
                         int decade = decadeStart;
                         object.put("decade", decade);
-
+//                        计算年龄
                         LocalDate currentDate = LocalDate.now(ZoneId.of("Asia/Shanghai"));
                         int age = calculateAge(birthday, currentDate);
                         object.put("age", age);
-
+//                        计算星座
                         String zodiac = getZodiacSign(birthday);
                         object.put("zodiac_sign", zodiac);
                     }
@@ -113,22 +122,25 @@ public class DwdDbApp {
 
 //        outputStreamOperator.print();
 
+//        过滤掉无效数据（确保 uid 字段存在且非空）
         SingleOutputStreamOperator<JSONObject> UserinfoDs = streamOperator.filter(data -> data.containsKey("uid") && !data.getString("uid").isEmpty());
         SingleOutputStreamOperator<JSONObject> UserinfoSupDs = outputStreamOperator.filter(data -> data.containsKey("uid") && !data.getString("uid").isEmpty());
-
+//        按照用户ID进行分组，为后续的JOIN操作做准备
         KeyedStream<JSONObject, String> keyedStreamUserInfoDs = UserinfoDs.keyBy(data -> data.getString("uid"));
         KeyedStream<JSONObject, String> keyedStreamUserInfoSupDs = UserinfoSupDs.keyBy(data -> data.getString("uid"));
-//
+//        打印分组后的流
         keyedStreamUserInfoDs.print();
        keyedStreamUserInfoSupDs.print();
 
+//         执行时间窗口内的JOIN操作   正负60分钟内
+//         将用户基本信息和补充信息合并为一条完整记录
         SingleOutputStreamOperator<JSONObject> processIntervalJoinUserInfo6BaseMessageDs = keyedStreamUserInfoSupDs.intervalJoin(keyedStreamUserInfoDs)
                 .between(Time.minutes(-60), Time.minutes(60))
                 .process(new ProcessJoinFunction<JSONObject, JSONObject, JSONObject>() {
                     @Override
                     public void processElement(JSONObject userInfo, JSONObject userInfoSup, ProcessJoinFunction<JSONObject, JSONObject, JSONObject>.Context ctx, Collector<JSONObject> out) throws Exception {
                         JSONObject merged = new JSONObject();
-                        // 添加用户基本信息（来自 UserInfoDS）
+                        // 添加用户基本信息
                         merged.put("uid", userInfo.getString("uid"));
                         merged.put("name", userInfo.getString("name"));
                         merged.put("decade", userInfo.getString("decade"));
@@ -144,7 +156,7 @@ public class DwdDbApp {
                             merged.put("gender", "null");
                         }
 
-                        // 添加用户补充信息（来自 UserInfoSupDS）
+                        // 添加用户补充信息
                         merged.put("unit_height", userInfoSup.getString("unit_height"));
                         merged.put("height", userInfoSup.getString("height"));
                         merged.put("weight", userInfoSup.getString("weight"));
@@ -155,17 +167,19 @@ public class DwdDbApp {
                     }
                 });
 
+//        打印完整用户信息
         processIntervalJoinUserInfo6BaseMessageDs.print("processIntervalJoinUserInfo6BaseMessageDs ->");
 
-
+//        启动 Flink 作业
         env.execute("DwdApp");
     }
 
+//    定义年龄函数
     private static int calculateAge(LocalDate birthDate, LocalDate currentDate) {
         return Period.between(birthDate, currentDate).getYears();
     }
 
-
+//    定义星座函数
     private static String getZodiacSign(LocalDate birthDate) {
         int month = birthDate.getMonthValue();
         int day = birthDate.getDayOfMonth();
