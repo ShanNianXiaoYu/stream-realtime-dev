@@ -26,7 +26,7 @@ import java.time.Duration;
 
 /**
  * @Package com.lzy.app.dwd.DwdMerge
- * @Author zheyuan.liu
+ * @Author guoqiang.zhang
  * @Date 2025/5/15 20:25
  * @description:
  */

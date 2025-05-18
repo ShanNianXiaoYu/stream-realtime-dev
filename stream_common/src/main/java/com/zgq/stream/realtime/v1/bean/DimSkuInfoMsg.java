@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * @Package com.lzy.stream.realtime.v1.bean.DimSkuInfoMsg
- * @Author zheyuan.liu
+ * @Author guoqiang.zhang
  * @Date 2025/5/15 19:46
  * @description:
  */
