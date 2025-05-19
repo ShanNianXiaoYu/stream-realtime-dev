@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * @Package com.lzy.stream.realtime.v1.bean.DimSkuInfoMsg
+ * @Package com.zgq.stream.realtime.v1.bean.DimSkuInfoMsg
  * @Author guoqiang.zhang
  * @Date 2025/5/15 19:46
  * @description:

@@ -25,7 +25,7 @@ import java.io.*;
 import java.time.Duration;
 
 /**
- * @Package com.lzy.app.dwd.DwdMerge
+ * @Package com.zgq.app.dwd.DwdMerge
  * @Author guoqiang.zhang
  * @Date 2025/5/15 20:25
  * @description:
@@ -115,6 +115,7 @@ public class DwdMerge {
 
         env.execute();
     }
+
     public static class ExportToCSVSinkFunction implements SinkFunction<String> {
         private String filePath;
 

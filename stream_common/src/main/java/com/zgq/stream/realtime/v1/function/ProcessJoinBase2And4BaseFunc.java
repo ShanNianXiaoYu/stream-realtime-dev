@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 /**
- * @Package com.lzy.stream.realtime.v1.function.ProcessJoinBase2And4BaseFunc
+ * @Package com.zgq.stream.realtime.v1.function.ProcessJoinBase2And4BaseFunc
  * @Author guoqiang.zhang
  * @Date 2025/5/15 20:40
  * @description:
