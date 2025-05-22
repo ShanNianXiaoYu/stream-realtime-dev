@@ -34,6 +34,7 @@ public class SQLUtil {
           " 'lookup.partial-cache.expire-after-write' = '1 hour',\n" +
           " 'lookup.partial-cache.expire-after-access' = '1 hour'\n" +
           ")";
+
  }
 
  //获取upsert-kafka连接器的连接属性
