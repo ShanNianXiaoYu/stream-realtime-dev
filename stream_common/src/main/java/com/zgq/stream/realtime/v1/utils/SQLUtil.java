@@ -46,7 +46,6 @@ public class SQLUtil {
           "  'key.format' = 'json',\n" +
           "  'value.format' = 'json'\n" +
           ")";
-
  }
 
 }
