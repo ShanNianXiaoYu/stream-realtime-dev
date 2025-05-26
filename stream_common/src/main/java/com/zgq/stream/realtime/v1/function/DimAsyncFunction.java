@@ -72,7 +72,6 @@ public abstract class DimAsyncFunction<T> extends RichAsyncFunction <T,T> implem
              }else{
               System.out.println("~~~没有找到"+getTableName()+"表的"+getRowKey(obj)+"数据~~~");
              }
-
             }
             return dimJsonObj;
            }
